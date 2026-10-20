@@ -19,10 +19,12 @@ BarWidget {
   property bool keyboardUnresolved: false
   property bool multipleLayouts: true
   property var layoutBriefs: ({})
+  property var layoutCodes: ({})
   property var currentTypedKeyboards: []
 
   // Computed
   readonly property string layoutLabel: LangToggleModel.shortLabel(layoutFull, layoutBriefs)
+  readonly property string layoutBrief: String(layoutBriefs[layoutFull] || "")
   property bool refreshPending: false
 
   // --- Core Logic ---
@@ -46,20 +48,22 @@ BarWidget {
     refreshTimer.restart()
   }
 
-  // Toggle specifically between EN and ES layouts
+  // Toggle specifically between the EN and ES layouts.
+  //
+  // The keyboard's layout list is a list of xkb codes ("latam,us") and the
+  // active one is named by its description ("English (US)"), so the slot of
+  // the other language is found by translating the codes into briefs. The
+  // result is the index switchxkblayout expects.
   function toggleEnEs() {
     if (!root.keyboardName || !root.bar) return
     const kb = root.selectKeyboard()
     if (!kb) return
 
-    const otherLayout = LangToggleModel.getOtherEnEsLayout(kb, root.layoutFull)
-    if (!otherLayout) return
+    const targetIndex = LangToggleModel.otherEnEsIndex(kb.layout, root.layoutCodes, root.layoutBrief)
+    if (targetIndex < 0) return
 
-    const targetIndex = LangToggleModel.getLayoutIndex(kb, otherLayout)
-    if (targetIndex >= 0) {
-      root.bar.run("hyprctl switchxkblayout " + Util.shellQuote(root.keyboardName) + " " + targetIndex)
-      refreshTimer.restart()
-    }
+    root.bar.run("hyprctl switchxkblayout " + Util.shellQuote(root.keyboardName) + " " + targetIndex)
+    refreshTimer.restart()
   }
 
   // --- Hyprland Event Handling ---
@@ -129,7 +133,11 @@ BarWidget {
     command: ["xkbcli", "list", "--load-exotic"]
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.layoutBriefs = LangToggleModel.layoutBriefs(text)
+      onStreamFinished: {
+        const table = LangToggleModel.layoutTable(text)
+        root.layoutBriefs = table.briefs
+        root.layoutCodes = table.codes
+      }
     }
   }
 

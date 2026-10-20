@@ -1,5 +1,15 @@
-// Label math for the language toggle widget, kept Qt-free so it can be unit
-// tested under node (test/unit/lang-toggle-model-test.js).
+// Label and layout-slot math for the language toggle widget, kept Qt-free so it
+// can be unit tested under node (test/unit/lang-toggle-model-test.js).
+//
+// hyprctl speaks two dialects about the same keyboard, and confusing them is
+// the bug this file exists to prevent:
+//
+//   kb.layout       -> "latam,us"          xkb layout CODES, in slot order
+//   kb.active_keymap -> "English (US)"      the DESCRIPTION of the active slot
+//
+// The slot list is what switchxkblayout indexes, and the description is what
+// the bar label shows, so the two have to be translated into each other
+// through xkb's own table before anything can be reasoned about.
 
 // xkbcli list prints YAML, and every layout and variant block pairs a brief with
 // the description hyprctl reports as the active keymap:
@@ -12,25 +22,87 @@
 // The models and option groups it also prints carry no brief of their own, and
 // a brief never carries past the block it was printed in, so neither reaches
 // the table.
-function layoutBriefs(text) {
+//
+// Two tables come out of that. The description table answers "what is active",
+// and the code table answers "which slot in the list is Spanish" — a code
+// never spells its language, so "latam" has to be looked up to find it is.
+function layoutTable(text) {
   var briefs = {}
-  var brief = ""
+  var codes = {}
+  var block = { layout: "", variant: "", brief: "", description: "" }
+
+  function flush() {
+    if (!block.brief || !block.description) return
+    briefs[block.description] = block.brief
+    // Only the default variant claims the code itself; the variants share it,
+    // and the first one printed is the default.
+    if (!block.variant && !codes[block.layout]) codes[block.layout] = block.brief
+  }
 
   String(text || "").split("\n").forEach(function (line) {
-    if (/^\s*- /.test(line)) brief = ""
-
-    var field = line.match(/^  (brief|description): (.*)$/)
-    if (!field) return
-
-    if (field[1] === "brief") {
-      brief = field[2].replace(/^'|'$/g, "")
-    } else if (brief) {
-      briefs[field[2]] = brief
-      brief = ""
+    if (/^\s*- /.test(line)) {
+      flush()
+      block = { layout: "", variant: "", brief: "", description: "" }
     }
+
+    // The layout code sits on the "- " line, the rest are indented under it.
+    var layoutField = line.match(/^- layout: (.*)$/)
+    if (layoutField) {
+      block.layout = layoutField[1].replace(/^'|'$/g, "")
+      return
+    }
+
+    var field = line.match(/^  (variant|brief|description): (.*)$/)
+    if (!field) return
+    block[field[1]] = field[2].replace(/^'|'$/g, "")
   })
 
-  return briefs
+  // The last block never sees the "- " that would have closed it.
+  flush()
+
+  return { briefs: briefs, codes: codes }
+}
+
+// The brief for a description, used for the label and to know which of EN/ES
+// is the one that is active.
+function layoutBriefs(text) {
+  return layoutTable(text).briefs
+}
+
+// The brief for an xkb layout code ("us" -> "en", "latam" -> "es").
+function codeBrief(codes, code) {
+  var brief = (codes || {})[String(code || "").trim()]
+  return typeof brief === "string" ? brief : ""
+}
+
+// The xkb codes of a keyboard's layout list, in the order hyprctl reports them.
+// That order is the index space of switchxkblayout.
+function layoutCodes(layoutList) {
+  return String(layoutList || "")
+    .split(",")
+    .map(function (code) { return code.trim() })
+    .filter(function (code) { return code !== "" })
+}
+
+// The index of the other EN/ES layout in a keyboard's layout list.
+//
+// The codes are translated into briefs first, because the active layout is
+// named by its brief and the slots are named by codes: "latam" is the Spanish
+// slot even though it never spells "spanish", and "us" is the English one.
+//
+// Returns -1 when the other layout is not on the seat, which leaves the widget
+// inert instead of switching to something the user did not ask for.
+function otherEnEsIndex(layoutList, codes, currentBrief) {
+  var list = layoutCodes(layoutList)
+  var current = String(currentBrief || "").toLowerCase()
+
+  for (var i = 0; i < list.length; i++) {
+    var brief = codeBrief(codes, list[i]).toLowerCase()
+    if (!brief || brief === current) continue
+    if (brief === "en" || brief === "es") return i
+  }
+
+  return -1
 }
 
 // The brief is a short language code rather than a country one, which keeps the
@@ -114,47 +186,24 @@ function layoutIndex(keyboard) {
   return (keyboard && keyboard.active_layout_index) || 0
 }
 
-// Check if a layout description represents English or Spanish
+// Whether a layout is one of the two this widget toggles between.
 function isEnEsLayout(description) {
   if (!description) return false
   var desc = String(description).toLowerCase()
-  return desc.indexOf("english") === 0 || desc.indexOf("spanish") === 0 || desc.indexOf("español") === 0
-}
-
-// Get the other EN/ES layout from the keyboard's layout list
-function getOtherEnEsLayout(keyboard, currentDescription) {
-  if (!keyboard || !keyboard.layout) return null
-  var layouts = String(keyboard.layout).split(",")
-  var current = String(currentDescription || "").toLowerCase()
-  for (var i = 0; i < layouts.length; i++) {
-    var layout = layouts[i].trim().toLowerCase()
-    if (layout !== current && (layout.indexOf("english") === 0 || layout.indexOf("spanish") === 0 || layout.indexOf("español") === 0)) {
-      return layouts[i].trim()
-    }
-  }
-  return null
-}
-
-// Get the index of a specific layout in the keyboard's layout list
-function getLayoutIndex(keyboard, targetDescription) {
-  if (!keyboard || !keyboard.layout) return -1
-  var layouts = String(keyboard.layout).split(",")
-  var target = String(targetDescription || "").trim().toLowerCase()
-  for (var i = 0; i < layouts.length; i++) {
-    if (layouts[i].trim().toLowerCase() === target) return i
-  }
-  return -1
+  return desc.indexOf("english") === 0 || desc.indexOf("spanish") === 0
 }
 
 if (typeof module !== "undefined") {
   module.exports = {
     eventKeyboardName: eventKeyboardName,
     isTypedKeyboard: isTypedKeyboard,
-    layoutBriefs: layoutBriefs,
-    selectKeyboard: selectKeyboard,
-    shortLabel: shortLabel,
     isEnEsLayout: isEnEsLayout,
-    getOtherEnEsLayout: getOtherEnEsLayout,
-    getLayoutIndex: getLayoutIndex
+    layoutBriefs: layoutBriefs,
+    layoutCodes: layoutCodes,
+    layoutTable: layoutTable,
+    codeBrief: codeBrief,
+    otherEnEsIndex: otherEnEsIndex,
+    selectKeyboard: selectKeyboard,
+    shortLabel: shortLabel
   }
 }
