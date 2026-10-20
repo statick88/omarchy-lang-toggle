@@ -16,10 +16,10 @@ check() {
   local message="$2"
   if eval "$condition"; then
     echo "✅ PASS: $message"
-    ((passed++))
+    passed=$((passed + 1))
   else
     echo "❌ FAIL: $message"
-    ((failed++))
+    failed=$((failed + 1))
   fi
 }
 
@@ -50,11 +50,11 @@ check '[ -f "$PLUGIN_DIR/LangToggleModel.js" ]' "LangToggleModel.js exists"
 echo "Running omarchy-plugin-validate..."
 if omarchy-plugin-validate "$PLUGIN_DIR" 2>/dev/null; then
   echo "✅ PASS: omarchy-plugin-validate passes"
-  ((passed++))
+  passed=$((passed + 1))
 else
   echo "❌ FAIL: omarchy-plugin-validate fails"
   omarchy-plugin-validate "$PLUGIN_DIR" 2>&1 | head -20
-  ((failed++))
+  failed=$((failed + 1))
 fi
 
 # Test 6: Plugin ID not in reserved namespace
@@ -71,15 +71,15 @@ rm -rf "$STAGE_DIR"
 if git clone -- "$PLUGIN_DIR" "$STAGE_DIR" 2>/dev/null; then
   if omarchy-plugin-validate "$STAGE_DIR" 2>/dev/null; then
     echo "✅ PASS: Plugin can be cloned and validated"
-    ((passed++))
+    passed=$((passed + 1))
   else
     echo "❌ FAIL: Cloned plugin fails validation"
-    ((failed++))
+    failed=$((failed + 1))
   fi
   rm -rf "$STAGE_DIR"
 else
   echo "❌ FAIL: Failed to clone plugin locally"
-  ((failed++))
+  failed=$((failed + 1))
 fi
 
 # Test 9: Check manifest schema compliance
@@ -98,8 +98,8 @@ check 'jq -e ".barWidget.schema" "$MANIFEST" >/dev/null 2>&1' "barWidget has sch
 check 'jq -e ".barWidget.schema | length >= 1" "$MANIFEST" >/dev/null 2>&1' "schema has at least one setting"
 
 # Test 12: Default values present
-check 'jq -e ".barWidget.defaults.toggleKey" "$MANIFEST" >/dev/null 2>&1' "Has toggleKey default"
-check 'jq -e ".barWidget.defaults.showFullName" "$MANIFEST" >/dev/null 2>&1' "Has showFullName default"
+check 'jq -e ".barWidget.defaults | has(\"toggleKey\")" "$MANIFEST" >/dev/null 2>&1' "Has toggleKey default"
+check 'jq -e ".barWidget.defaults | has(\"showFullName\")" "$MANIFEST" >/dev/null 2>&1' "Has showFullName default"
 
 echo
 echo "=== SUMMARY ==="
