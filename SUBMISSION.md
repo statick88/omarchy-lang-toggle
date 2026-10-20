@@ -8,7 +8,7 @@ Widgets
 
 ### Tags
 
-bar, quickshell, compositor
+bar, quickshell, hyprland
 
 ### Suggest a missing tag
 
