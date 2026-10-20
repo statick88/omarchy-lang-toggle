@@ -118,7 +118,7 @@ Everything below ships with Omarchy or is a standard Arch package. This plugin i
 
 ### Privilege boundary
 
-The plugin runs **unsandboxed inside the long-lived `omarchy-shell` process** with your user's permissions, exactly like every other Omarchy shell plugin. No `sudo` or `pkexec` is required, and the plugin never writes outside `~/.config/omarchy/` and never modifies your Hyprland configuration on its own. The only commands it runs are read-only (`hyprctl -j devices`, `xkbcli list`) and one layout-switch command (`hyprctl switchxkblayout`).
+The plugin runs **unsandboxed inside the long-lived `omarchy-shell` process** with your user's permissions, exactly like every other Omarchy shell plugin. No sudo or pkexec is required, and the plugin never writes outside `~/.config/omarchy/` and never modifies your Hyprland configuration on its own. The only commands it runs are read-only (`hyprctl -j devices`, `xkbcli list`) and one layout-switch command (`hyprctl switchxkblayout`).
 
 ### Setup steps
 
