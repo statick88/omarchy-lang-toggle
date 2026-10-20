@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1b26"/>
+      <stop offset="100%" stop-color="#11121a"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2f3040"/>
+      <stop offset="100%" stop-color="#242533"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Top bar mock -->
+  <rect x="0" y="0" width="1200" height="56" fill="#0d0e14"/>
+  <line x1="0" y1="56" x2="1200" y2="56" stroke="#3a3b4d" stroke-width="1"/>
+
+  <!-- Left bar items -->
+  <g fill="#8a8b9e" font-family="JetBrainsMono, monospace" font-size="16">
+    <text x="28" y="36">omarchy</text>
+    <text x="130" y="36">arch</text>
+  </g>
+
+  <!-- Center clock -->
+  <text x="600" y="36" fill="#c8c9d8" font-family="JetBrainsMono, monospace" font-size="16" text-anchor="middle">15:42</text>
+
+  <!-- Right bar items -->
+  <g fill="#8a8b9e" font-family="JetBrainsMono, monospace" font-size="16">
+    <text x="1000" y="36">wifi</text>
+    <text x="1060" y="36">vol</text>
+    <text x="1110" y="36">bat</text>
+  </g>
+
+  <!-- The plugin widget: "EN" pill, highlighted -->
+  <rect x="930" y="12" width="52" height="32" rx="8" fill="url(#pill)" stroke="#7aa2f7" stroke-width="1.5"/>
+  <text x="956" y="35" fill="#c8c9d8" font-family="JetBrainsMono, monospace" font-size="15" text-anchor="middle">EN</text>
+
+  <!-- Callout: the widget -->
+  <line x1="956" y1="56" x2="956" y2="118" stroke="#7aa2f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <circle cx="956" cy="122" r="4" fill="#7aa2f7"/>
+
+  <!-- Tooltip mock -->
+  <rect x="862" y="130" width="188" height="40" rx="8" fill="#2f3040" stroke="#4a4b5e" stroke-width="1"/>
+  <text x="956" y="155" fill="#c8c9d8" font-family="JetBrainsMono, monospace" font-size="14" text-anchor="middle">English (US)</text>
+
+  <!-- Title block -->
+  <text x="80" y="250" fill="#e6e7f0" font-family="JetBrainsMono, monospace" font-size="46" font-weight="bold">Language Toggle</text>
+  <text x="80" y="300" fill="#7aa2f7" font-family="JetBrainsMono, monospace" font-size="22">EN / ES keyboard layout switch for the Omarchy bar</text>
+
+  <!-- Feature bullets -->
+  <g fill="#a9aab8" font-family="JetBrainsMono, monospace" font-size="19">
+    <text x="80" y="372">•  Click the widget to toggle EN ⇄ ES</text>
+    <text x="80" y="412">•  Bind Fn (or any key) to toggle via IPC</text>
+    <text x="80" y="452">•  Auto-detects the keyboard you are typing on</text>
+    <text x="80" y="492">•  Hides itself when only one layout is configured</text>
+  </g>
+
+  <!-- EN / ES big indicator -->
+  <rect x="880" y="230" width="240" height="150" rx="16" fill="url(#pill)" stroke="#4a4b5e" stroke-width="1.5"/>
+  <text x="1000" y="278" fill="#7aa2f7" font-family="JetBrainsMono, monospace" font-size="32" font-weight="bold" text-anchor="middle">EN</text>
+  <text x="1000" y="312" fill="#56576a" font-family="JetBrainsMono, monospace" font-size="22" text-anchor="middle">⇄</text>
+  <text x="1000" y="352" fill="#e6e7f0" font-family="JetBrainsMono, monospace" font-size="32" font-weight="bold" text-anchor="middle">ES</text>
+
+  <!-- Footer -->
+  <text x="80" y="580" fill="#56576a" font-family="JetBrainsMono, monospace" font-size="16">io.github.statick.lang-toggle  •  omarchy plugin add https://github.com/statick88/omarchy-lang-toggle.git --enable</text>
+</svg>

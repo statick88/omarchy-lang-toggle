@@ -22,7 +22,7 @@ A simple, useful Omarchy bar widget that shows your current keyboard layout (EN/
 ### Via Omarchy Plugin Manager (Recommended)
 
 ```bash
-omarchy plugin add https://github.com/statick/omarchy-lang-toggle.git --enable
+omarchy plugin add https://github.com/statick88/omarchy-lang-toggle.git --enable
 ```
 
 This will:
@@ -35,11 +35,11 @@ This will:
 
 ```bash
 # Clone the repository
-git clone https://github.com/statick/omarchy-lang-toggle.git \
+git clone https://github.com/statick88/omarchy-lang-toggle.git \
   ~/.config/omarchy/plugins/io.github.statick.lang-toggle
 
 # Validate the plugin
-omarchy-plugin-validate ~/.config/omarchy/plugins/io.github.statick.lang-toggle
+omarchy plugin validate ~/.config/omarchy/plugins/io.github.statick.lang-toggle
 
 # Rescan plugins to load it
 omarchy-shell shell rescanPlugins
@@ -96,6 +96,40 @@ o.bind("SUPER + SPACE", "Toggle EN/ES Layout",
 )
 ```
 
+After editing, reload Hyprland with `hyprctl reload`, then verify with `hyprctl configerrors`.
+
+## External Dependencies
+
+Everything below ships with Omarchy or is a standard Arch package. This plugin installs **no** packages, **no** services, **no** systemd units, and **no** remote builds.
+
+| Dependency | Provided by | Used for |
+|------------|-------------|----------|
+| `omarchy-shell` (Quickshell) | Omarchy Quattro | Plugin runtime, bar widget contract, IPC |
+| `hyprctl` | Hyprland | `devices` query and `switchxkblayout` switching |
+| `xkbcli` | `xkbcli` package (Arch) | Language briefs for layout labels |
+| `xkb` data | `xkb-data` package (Arch) | Layout/variant descriptions read by `xkbcli` |
+
+### Privilege boundary
+
+The plugin runs **unsandboxed inside the long-lived `omarchy-shell` process** with your user's permissions, exactly like every other Omarchy shell plugin. It never elevates privileges, never uses `sudo`/`pkexec`, never writes outside `~/.config/omarchy/`, and never modifies your Hyprland configuration on its own. The only commands it runs are read-only (`hyprctl -j devices`, `xkbcli list`) and one layout-switch command (`hyprctl switchxkblayout`).
+
+### Setup steps
+
+1. Install the plugin (above).
+2. Ensure your Hyprland config has both layouts, for example in `~/.config/hypr/input.lua`:
+
+   ```lua
+   hl.keyboard({
+     layout = {
+       { "English (US)", "Spanish (ES)" }
+     }
+   })
+   ```
+
+3. Optionally add the Fn key binding shown above.
+
+The plugin does **not** write to `~/.config/hypr/` — the layout list and the keybinding are yours to configure.
+
 ## How It Works
 
 1. **Keyboard Detection**: Queries `hyprctl -j devices` to find all keyboards, filters out virtual keyboards (fcitx5), power buttons, lid switches, and other non-typing devices
@@ -106,9 +140,9 @@ o.bind("SUPER + SPACE", "Toggle EN/ES Layout",
 
 ## Requirements
 
-- Omarchy Quattro (with omarchy-shell)
+- Omarchy Quattro (with `omarchy-shell`)
 - Hyprland (for `hyprctl` and `switchxkblayout`)
-- `xkbcli` (for layout briefs - included in `xkbcli` package on Arch)
+- `xkbcli` (for layout briefs — `xkbcli` package on Arch)
 
 ## Removal
 
@@ -121,6 +155,8 @@ rm -rf ~/.config/omarchy/plugins/io.github.statick.lang-toggle
 omarchy-shell shell rescanPlugins
 ```
 
+Removing the plugin does not change your Hyprland layout list or keybindings; clean those up yourself if you added them.
+
 ## Development
 
 ### Project Structure
@@ -128,8 +164,10 @@ omarchy-shell shell rescanPlugins
 ```
 omarchy-lang-toggle/
 ├── manifest.json          # Plugin manifest (schemaVersion 1)
-├── Widget.qml             # Main bar widget (entry point)
+├── BarWidget.qml          # Main bar widget (entry point)
 ├── LangToggleModel.js     # Shared logic (Qt-free, unit testable)
+├── preview.png            # Marketplace preview image
+├── assets/preview.svg     # Source of the preview image
 ├── test/
 │   ├── unit/
 │   │   └── lang-toggle-model-test.js  # Unit tests for model logic
@@ -148,7 +186,7 @@ omarchy-lang-toggle/
 # Unit tests (model logic)
 node test/unit/lang-toggle-model-test.js
 
-# Integration tests (plugin validation, structure)
+# Integration tests (manifest validation, qmllint, structure)
 bash test/integration/plugin-integration-test.sh
 
 # E2E tests (requires running Omarchy shell with test page)
@@ -157,9 +195,18 @@ npx playwright test test/e2e/lang-toggle-e2e.test.js
 
 ### Validating the Plugin
 
+The marketplace requires both checks. The second one needs the shell's QML
+imports, so it is run against the installed shell tree:
+
 ```bash
-omarchy-plugin-validate .
+# 1. Manifest and repository layout
+omarchy plugin validate .
+
+# 2. QML static analysis against the installed shell
+qmllint -I "$OMARCHY_PATH/shell" BarWidget.qml
 ```
+
+`qmllint` lives in the `qt6-tools` package (`/usr/lib/qt6/bin/qmllint` on Arch).
 
 ## License
 
@@ -167,10 +214,10 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Author
 
-statick (@statick on GitHub)
+statick88 ([@statick88](https://github.com/statick88)) — see [statick88/omarchy-lang-toggle](https://github.com/statick88/omarchy-lang-toggle).
 
 ## Related
 
 - [Omarchy Plugin Marketplace](https://plugins.omarchy.org/)
 - [Omarchy Shell Plugin Documentation](https://github.com/omacom/omarchy/blob/quattro/docs/omarchy-shell.md)
-- [Original keyboard-layout widget](https://github.com/omacom/omarchy/tree/quattro/shell/plugins/panels/keyboard-layout)
+- [Marketplace development guide](https://plugins.omarchy.org/develop.html)

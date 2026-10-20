@@ -8,7 +8,7 @@
   "description": "EN/ES keyboard layout toggle for Omarchy bar — shows current layout, click or press Fn to switch",
   "kinds": ["bar-widget"],
   "entryPoints": {
-    "barWidget": "Widget.qml"
+    "barWidget": "BarWidget.qml"
   },
   "barWidget": {
     "displayName": "Language Toggle",
