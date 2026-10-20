@@ -162,3 +162,40 @@ user's `~/.config/hypr/bindings.lua` now binds `XF86Fn` and
 the compositor sees it) to the same command, and `hyprctl configerrors` is
 clean. The README documents the working keysym and the real IPC syntax
 (`omarchy-shell <target> <method>`, not `omarchy-shell shell ipc ...`).
+
+### L8 (2026-10-20) — security baseline false positives
+The marketplace's Automated Security Baseline reported two capabilities that
+were artefacts of the README's wording, not of the plugin:
+
+- `remote-build` was triggered by the raw `git clone` line of the manual
+  install block. Replaced with `omarchy plugin add`, which is the documented
+  install path and covers the same ground.
+- `privilege` was triggered by a sentence saying the plugin does not elevate.
+  The baseline's negation matcher works on the raw README line, and the
+  backticks around the words broke the match: `No \`sudo\` or \`pkexec\` is
+  required` is not recognised, while `No sudo or pkexec is required` is.
+
+The baseline now reports `passed` with no findings and no capabilities, and
+the validation names the current commit. The knowledge is captured in the
+skills `omarchy-marketplace-scanner` and `omarchy-hyprland-keyboard-layout`.
+
+### L9 (2026-10-20) — re-validation mechanics
+Two mechanics of the marketplace workflow that cost time and are worth
+recording:
+
+- Editing the submission issue with an unchanged body does not fire the
+  `edited` event, so the workflow never runs and the reports keep naming the
+  old commit. The body has to actually change.
+- The workflow resolves the branch head when it starts. A push that lands
+  after the run begins is validated against the previous commit, so the
+  push has to complete before the issue is edited.
+
+### Final state
+- Repository: https://github.com/statick88/omarchy-lang-toggle
+- Submission: https://github.com/omacom/omarchy-plugin-marketplace/issues/12380
+- Labels: `submission`, `validated`. Marketplace validation passed and the
+  Automated Security Baseline passed. Publication still needs a maintainer to
+  apply `approved-and-verified`, which is a human action by design.
+- Tests: 86 unit, 37 integration, both official validations green.
+- Verified live: install, enable, shell restart, disable, re-enable, removal,
+  and a bidirectional EN <-> ES toggle through the running shell.
