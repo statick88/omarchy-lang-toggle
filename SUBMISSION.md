@@ -29,3 +29,5 @@ External dependencies are limited to `hyprctl` (Hyprland) and `xkbcli` (Arch `xk
 - [x] The plugin does not overwrite user configuration without explicit consent.
 - [x] I understand that approval is for listing and is not a security review.
 <!-- validation-refresh -->
+
+<!-- validation-refresh-2 -->
