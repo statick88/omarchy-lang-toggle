@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.statick.lang-toggle",
+  "name": "Language Toggle",
+  "version": "1.0.0",
+  "author": "statick",
+  "license": "MIT",
+  "description": "EN/ES keyboard layout toggle for Omarchy bar — shows current layout, click or press Fn to switch",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
+  "barWidget": {
+    "displayName": "Language Toggle",
+    "description": "Shows EN/ES in the bar, click or press Fn to toggle between layouts",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "toggleKey": "Fn",
+      "showFullName": false
+    },
+    "schema": [
+      {
+        "key": "toggleKey",
+        "type": "string",
+        "label": "Toggle key",
+        "defaultValue": "Fn",
+        "description": "Key to press for toggling layout (Fn, Super+Space, etc.)"
+      },
+      {
+        "key": "showFullName",
+        "type": "boolean",
+        "label": "Show full name",
+        "defaultValue": false,
+        "description": "Show 'English (US)' instead of 'EN' in the bar"
+      }
+    ]
+  }
+}
