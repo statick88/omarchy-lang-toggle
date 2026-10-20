@@ -74,29 +74,37 @@ The widget can be configured via `~/.config/omarchy/shell.json` or the Omarchy s
 To use the Fn key to toggle layouts, add this to your `~/.config/hypr/bindings.lua`:
 
 ```lua
--- Toggle EN/ES with Fn key (requires the widget to be loaded)
-o.bind("FN", "Toggle EN/ES Layout", function()
-  omarchy.ipc("io.github.statick.lang-toggle", "toggleEnEs")
-end)
+-- Toggle EN/ES with the Fn key (requires the widget to be loaded)
+o.bind("XF86Fn", "Toggle EN/ES Layout",
+  "omarchy-shell io.github.statick.lang-toggle toggleEnEs")
 ```
 
-Or using the hyprctl command directly:
+`XF86Fn` is the keysym Hyprland uses for the Fn key. Plain `FN` and `KEY_FN`
+are rejected with `Unknown keysym` on Hyprland, and some keyboards hand Fn to
+their own firmware before the compositor ever sees it. If Fn does not reach
+Hyprland on your machine, bind a fallback to the same command:
 
 ```lua
-o.bind("FN", "Toggle EN/ES Layout", 
-  "omarchy-shell shell ipc io.github.statick.lang-toggle toggleEnEs"
-)
+o.bind("SUPER + SHIFT + L", "Toggle EN/ES Layout",
+  "omarchy-shell io.github.statick.lang-toggle toggleEnEs")
 ```
 
-**Note**: The Fn key may be intercepted by your keyboard firmware. If it doesn't work, try `SUPER+SPACE` or another key combination:
+After editing, reload Hyprland and check for errors:
 
-```lua
-o.bind("SUPER + SPACE", "Toggle EN/ES Layout", 
-  "omarchy-shell shell ipc io.github.statick.lang-toggle toggleEnEs"
-)
+```bash
+hyprctl reload
+hyprctl configerrors
 ```
 
-After editing, reload Hyprland with `hyprctl reload`, then verify with `hyprctl configerrors`.
+### IPC command reference
+
+The widget exposes these IPC methods, callable as `omarchy-shell <target> <method>`:
+
+| Method | Effect |
+|--------|--------|
+| `toggleEnEs` | Switch to the other EN/ES layout |
+| `cycleLayout` | Advance to the next layout in the keyboard's list |
+| `refresh` | Re-read the keyboard and layout state |
 
 ## External Dependencies
 
@@ -136,7 +144,21 @@ The plugin does **not** write to `~/.config/hypr/` — the layout list and the k
 2. **Active Keyboard**: Tracks `activelayout` events from Hyprland to know which keyboard you're currently typing on
 3. **Layout Reading**: Reads the `active_keymap` from the active typing keyboard
 4. **Language Codes**: Uses `xkbcli list --load-exotic` to map xkb descriptions to standard language codes (en/es/fr/de/etc.)
-5. **Toggle Logic**: When toggling, finds the other EN/ES layout in the keyboard's layout list and switches to it directly by index
+5. **Toggle Logic**: hyprctl describes the active layout by name (`English (US)`) but lists the seat's layouts by xkb code (`latam,us`), so the codes are translated through xkb's own table to find the other EN/ES slot, and the widget switches to it by index
+
+### The two dialects of `hyprctl devices`
+
+This is the detail that makes the toggle work, and the one that is easy to get wrong:
+
+| Field | Example | What it is |
+|-------|---------|-----------|
+| `kb.active_keymap` | `"English (US)"` | the **description** of the active layout |
+| `kb.layout` | `"latam,us"` | the **xkb codes** of the seat's layouts, in slot order |
+
+`hyprctl switchxkblayout` indexes the second one, and the label shows the
+first. `"latam"` is the Spanish slot even though it never spells "spanish", so
+the codes have to be translated into briefs before the other slot can be found.
+The layout list and the active layout must never be compared directly.
 
 ## Requirements
 
