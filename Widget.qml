@@ -12,6 +12,7 @@ BarWidget {
   id: root
   moduleName: "io.github.statick.lang-toggle"
 
+  // State
   property string layoutFull: ""
   property string keyboardName: ""
   property string typedKeyboardName: ""
@@ -19,9 +20,13 @@ BarWidget {
   property bool keyboardUnresolved: false
   property bool multipleLayouts: true
   property var layoutBriefs: ({})
+  property var currentTypedKeyboards: []
+
+  // Computed
   readonly property string layoutLabel: LangToggleModel.shortLabel(layoutFull, layoutBriefs)
   property bool refreshPending: false
-  property bool fnPressed: false
+
+  // --- Core Logic ---
 
   function refresh() {
     if (queryProc.running) {
@@ -32,12 +37,8 @@ BarWidget {
     queryProc.running = true
   }
 
-  function typedKeyboards(keyboards) {
-    return keyboards.filter(k => LangToggleModel.isTypedKeyboard(k.name))
-  }
-
-  function selectKeyboard(typed) {
-    return LangToggleModel.selectKeyboard(typed, root.typedKeyboardName)
+  function selectKeyboard() {
+    return LangToggleModel.selectKeyboard(currentTypedKeyboards, root.typedKeyboardName)
   }
 
   function cycleLayout() {
@@ -49,29 +50,26 @@ BarWidget {
   // Toggle specifically between EN and ES layouts
   function toggleEnEs() {
     if (!root.keyboardName || !root.bar) return
-    var keyboard = selectKeyboard(root.typedKeyboards(JSON.parse(queryProc.lastOutput || "{}").keyboards || []))
-    if (!keyboard) return
+    const kb = root.selectKeyboard()
+    if (!kb) return
 
-    var otherLayout = LangToggleModel.getOtherEnEsLayout(keyboard, root.layoutFull)
+    const otherLayout = LangToggleModel.getOtherEnEsLayout(kb, root.layoutFull)
     if (!otherLayout) return
 
-    var targetIndex = LangToggleModel.getLayoutIndex(keyboard, otherLayout)
+    const targetIndex = LangToggleModel.getLayoutIndex(kb, otherLayout)
     if (targetIndex >= 0) {
       root.bar.run("hyprctl switchxkblayout " + Util.shellQuote(root.keyboardName) + " " + targetIndex)
       refreshTimer.restart()
     }
   }
 
-  Component.onCompleted: {
-    briefsProc.running = true
-    refresh()
-  }
+  // --- Hyprland Event Handling ---
 
   Connections {
     target: Hyprland
     function onRawEvent(event) {
       if (!event || !event.name) return
-      var name = String(event.name)
+      const name = String(event.name)
       if (name === "activelayout") {
         const named = LangToggleModel.eventKeyboardName(event)
         if (named) root.typedKeyboardName = named
@@ -80,24 +78,10 @@ BarWidget {
     }
   }
 
-  // Global key press handler for Fn key toggle
-  Connections {
-    target: Hyprland
-    function onRawEvent(event) {
-      if (!event || !event.name) return
-      var name = String(event.name)
-      // Handle key press events - this is a simplified approach
-      // In practice, you'd use a more specific key binding
-      if (name === "keyboard_key" || name === "keyboard_key_released") {
-        // The actual key handling would be done via Hyprland keybindings
-        // This widget provides the toggleEnEs() function that can be called
-      }
-    }
-  }
+  // --- Device Query ---
 
   Process {
     id: queryProc
-    property string lastOutput: ""
     command: ["hyprctl", "-j", "devices"]
     onRunningChanged: {
       if (running) {
@@ -110,7 +94,6 @@ BarWidget {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        lastOutput = text || ""
         let listed
         try {
           listed = JSON.parse(text || "{}").keyboards
@@ -119,8 +102,10 @@ BarWidget {
         }
         if (!Array.isArray(listed)) return
 
-        const typed = root.typedKeyboards(listed)
-        const kb = root.selectKeyboard(typed)
+        const typed = listed.filter(k => LangToggleModel.isTypedKeyboard(k.name))
+        root.currentTypedKeyboards = typed
+
+        const kb = root.selectKeyboard()
         if (!kb || !kb.active_keymap) {
           root.keyboardUnresolved = true
           if (typed.length === 0) {
@@ -138,6 +123,8 @@ BarWidget {
     }
   }
 
+  // --- Layout Briefs (xkbcli) ---
+
   Process {
     id: briefsProc
     command: ["xkbcli", "list", "--load-exotic"]
@@ -146,6 +133,8 @@ BarWidget {
       onStreamFinished: root.layoutBriefs = LangToggleModel.layoutBriefs(text)
     }
   }
+
+  // --- Timers ---
 
   Timer {
     id: refreshTimer
@@ -169,7 +158,8 @@ BarWidget {
     onTriggered: root.refresh()
   }
 
-  // Expose toggleEnEs for external key binding
+  // --- IPC Interface ---
+
   IpcHandler {
     target: "io.github.statick.lang-toggle"
     function toggleEnEs(): void { root.toggleEnEs() }
@@ -177,9 +167,16 @@ BarWidget {
     function cycleLayout(): void { root.cycleLayout() }
   }
 
+  // --- UI ---
+
   visible: layoutLabel !== "" && multipleLayouts
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
+
+  Component.onCompleted: {
+    briefsProc.running = true
+    refresh()
+  }
 
   WidgetButton {
     id: button
