@@ -16,7 +16,11 @@ _No response_
 
 ### Maintainer notes
 
-Plugin provides EN/ES keyboard layout toggle in the Omarchy bar. Click to toggle between English and Spanish layouts, or configure a Hyprland keybinding (e.g., Fn or Super+Space) to toggle via IPC. Includes comprehensive unit tests (45 passing), integration tests (26 passing), and E2E test structure.
+Plugin provides EN/ES keyboard layout toggle in the Omarchy bar. Click to toggle between English and Spanish layouts, or bind a key (XF86Fn works for Fn) to the `toggleEnEs` IPC method.
+
+Verification performed against the live system: 86 unit tests, 37 integration checks (including both official validations, `omarchy plugin validate` and `qmllint` against the installed shell), and a full lifecycle run on the real compositor — install, enable, shell restart, disable, re-enable and removal. The EN/ES toggle was driven through the live shell and confirmed bidirectional and repeatable.
+
+External dependencies are limited to `hyprctl` (Hyprland) and `xkbcli` (Arch `xkbcli` package); the plugin installs nothing, runs no service, and never elevates privileges.
 
 ### Submission checklist
 
