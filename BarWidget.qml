@@ -189,7 +189,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: setting("showFullName", false) ? root.layoutFull : root.layoutLabel
+    text: root.setting("showFullName", "Off") === "On" ? root.layoutFull : root.layoutLabel
     fontSize: Style.font.caption
     horizontalMargin: 6
     tooltipText: root.layoutFull

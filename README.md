@@ -57,7 +57,7 @@ The widget can be configured via `~/.config/omarchy/shell.json` or the Omarchy s
     {
       "id": "io.github.statick.lang-toggle",
       "toggleKey": "Fn",
-      "showFullName": false
+      "showFullName": "Off"
     }
   ]
 }
@@ -66,7 +66,7 @@ The widget can be configured via `~/.config/omarchy/shell.json` or the Omarchy s
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `toggleKey` | string | `"Fn"` | Key to press for toggling (informational, actual binding in Hyprland) |
-| `showFullName` | boolean | `false` | Show "English (US)" instead of "EN" in the bar |
+| `showFullName` | enum | `"Off"` | `"On"` shows "English (US)" instead of "EN" in the bar |
 
 ## Fn Key Binding Setup
 

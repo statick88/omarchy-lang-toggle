@@ -18,7 +18,7 @@
     "defaultSection": "right",
     "defaults": {
       "toggleKey": "Fn",
-      "showFullName": false
+      "showFullName": "Off"
     },
     "schema": [
       {
@@ -30,9 +30,10 @@
       },
       {
         "key": "showFullName",
-        "type": "boolean",
+        "type": "enum",
         "label": "Show full name",
-        "defaultValue": false,
+        "options": ["Off", "On"],
+        "defaultValue": "Off",
         "description": "Show 'English (US)' instead of 'EN' in the bar"
       }
     ]
