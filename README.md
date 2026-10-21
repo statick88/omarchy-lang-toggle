@@ -1,18 +1,18 @@
 # Language Toggle — EN/ES Keyboard Layout Widget for Omarchy
 
-A simple, useful Omarchy bar widget that shows your current keyboard layout (EN/ES) and lets you toggle between them with a click or the Fn key.
+A simple, useful Omarchy bar widget that shows your current keyboard layout (EN/ES) and lets you toggle between them with a click or a keybinding.
 
 ## Preview
 
 ![Language Toggle Preview](preview.png)
 
-*The widget shows "EN" or "ES" in the bar. Click to toggle, or press Fn (when configured).*
+*The widget shows "EN" or "ES" in the bar. Click to toggle, or press your keybinding.*
 
 ## Features
 
 - **Clean display**: Shows "EN" or "ES" in the bar (configurable to show full names)
 - **Click to toggle**: Left-click the widget to switch between English and Spanish layouts
-- **Fn key support**: Configure a Hyprland keybinding to toggle with Fn key
+- **Keybinding support**: Bind any key that your hardware actually delivers (see [Key Binding Setup](#key-binding-setup))
 - **Smart keyboard detection**: Automatically identifies the keyboard you're typing on, ignoring virtual keyboards and system buttons
 - **Layout briefs**: Uses xkb's own language codes (en/es) for accurate short labels
 - **Only shows when needed**: Widget hides automatically when only one layout is configured
@@ -56,7 +56,7 @@ The widget can be configured via `~/.config/omarchy/shell.json` or the Omarchy s
   "plugins": [
     {
       "id": "io.github.statick.lang-toggle",
-      "toggleKey": "Fn",
+      "toggleKey": "SUPER+U",
       "showFullName": "Off"
     }
   ]
@@ -65,37 +65,67 @@ The widget can be configured via `~/.config/omarchy/shell.json` or the Omarchy s
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `toggleKey` | string | `"Fn"` | Key to press for toggling (informational, actual binding in Hyprland) |
+| `toggleKey` | string | `"SUPER+U"` | The key you bound for toggling (informational, the binding itself lives in your Hyprland config) |
 | `showFullName` | enum | `"Off"` | `"On"` shows "English (US)" instead of "EN" in the bar |
 
-## Fn Key Binding Setup
+## Key Binding Setup
 
-To use the Fn key to toggle layouts, add this to your `~/.config/hypr/bindings.lua`:
+The widget toggles on a click, so a keybinding is optional. When you add one,
+the shell's IPC is `omarchy-shell <target> <method> [args...]`:
 
 ```lua
--- Toggle EN/ES with the Fn key (requires the widget to be loaded)
-o.bind("XF86Fn", "Toggle EN/ES Layout",
-  "omarchy-shell io.github.statick.lang-toggle toggleEnEs")
+-- Toggle EN/ES (requires the widget to be loaded)
+o.bind("SUPER + U", "Toggle EN/ES Layout",
+  "omarchy-shell io.github.statick.lang-toggle toggleEnEs"
+)
 ```
 
-`XF86Fn` is the keysym Hyprland uses for the Fn key. Plain `FN` and `KEY_FN`
-are rejected with `Unknown keysym` on Hyprland, and some keyboards hand Fn to
-their own firmware before the compositor ever sees it. If Fn does not reach
-Hyprland on your machine, bind a fallback to the same command:
+`XF86Fn` is the keysym Hyprland uses for the Fn key, so the binding for it is:
 
 ```lua
-o.bind("SUPER + SHIFT + L", "Toggle EN/ES Layout",
-  "omarchy-shell io.github.statick.lang-toggle toggleEnEs")
+o.bind("XF86Fn", "Toggle EN/ES Layout",
+  "omarchy-shell io.github.statick.lang-toggle toggleEnEs"
+)
+```
+
+Plain `FN` and `KEY_FN` are rejected with `Unknown keysym` on Hyprland.
+
+**Note**: the Fn key is often swallowed by the laptop's firmware, and on some
+machines it can never reach the compositor at all. The binding only fires if
+the kernel receives a `KEY_FN` event, key code 464, and whether it does is a
+property of the hardware. It is worth checking before spending time on the
+binding:
+
+```bash
+# The codes each input device can report. KEY_FN is 464.
+cat /proc/bus/input/devices | grep -A 10 'Name=' | grep 'KEY='
+```
+
+A device whose bitmap stops below 464 cannot deliver Fn. On such a machine the
+binding above is inert and harmless, and the toggle needs a different key.
+
+**Choose a key that is actually free.** In Omarchy, `SUPER` is spoken for
+almost every letter, so a plain `SUPER + <letter>` will collide with something.
+`SUPER + U` is the one letter the framework leaves free, and it costs one key
+press on a modifier the hand already rests on. To find the free combinations
+on your own system:
+
+```bash
+# Every key SUPER already claims.
+hyprctl -j binds | jq -r '.[] | select(.modmask & 64 != 0) | .key' | sort -u
 ```
 
 After editing, reload Hyprland and check for errors:
 
 ```bash
-hyprctl reload
-hyprctl configerrors
+hyprctl reload && hyprctl configerrors
 ```
 
-### IPC command reference
+To confirm the binding really fires, watch the layout while you press it:
+
+```bash
+watch -n 1 'hyprctl -j devices | jq -r ".keyboards[] | .active_keymap"'
+```
 
 The widget exposes these IPC methods, callable as `omarchy-shell <target> <method>`:
 
@@ -105,6 +135,12 @@ The widget exposes these IPC methods, callable as `omarchy-shell <target> <metho
 | `cycleLayout` | Advance to the next layout in the keyboard's list |
 | `refresh` | Re-read the keyboard and layout state |
 
+To confirm the binding really fires, watch the layout while you press it:
+
+```bash
+watch -n 1 'hyprctl -j devices | jq -r ".keyboards[] | .active_keymap"'
+```
+
 ## External Dependencies
 
 Everything below ships with Omarchy or is a standard Arch package. This plugin installs **no** packages, **no** services, **no** systemd units, and **no** remote builds.
@@ -113,7 +149,7 @@ Everything below ships with Omarchy or is a standard Arch package. This plugin i
 |------------|-------------|----------|
 | `omarchy-shell` (Quickshell) | Omarchy Quattro | Plugin runtime, bar widget contract, IPC |
 | `hyprctl` | Hyprland | `devices` query and `switchxkblayout` switching |
-| `xkbcli` | `xkbcli` package (Arch) | Language briefs for layout labels |
+| `xkbcli` | `xkbcli` package (Arch) | Language briefs for layout labels, and the code-to-language table that resolves the EN/ES slots |
 | `xkb` data | `xkb-data` package (Arch) | Layout/variant descriptions read by `xkbcli` |
 
 ### Privilege boundary
@@ -133,7 +169,7 @@ The plugin runs **unsandboxed inside the long-lived `omarchy-shell` process** wi
    })
    ```
 
-3. Optionally add the Fn key binding shown above.
+3. Optionally add a keybinding for the toggle, as shown above.
 
 The plugin does **not** write to `~/.config/hypr/` — the layout list and the keybinding are yours to configure.
 
@@ -142,8 +178,8 @@ The plugin does **not** write to `~/.config/hypr/` — the layout list and the k
 1. **Keyboard Detection**: Queries `hyprctl -j devices` to find all keyboards, filters out virtual keyboards (fcitx5), power buttons, lid switches, and other non-typing devices
 2. **Active Keyboard**: Tracks `activelayout` events from Hyprland to know which keyboard you're currently typing on
 3. **Layout Reading**: Reads the `active_keymap` from the active typing keyboard
-4. **Language Codes**: Uses `xkbcli list --load-exotic` to map xkb descriptions to standard language codes (en/es/fr/de/etc.)
-5. **Toggle Logic**: hyprctl describes the active layout by name (`English (US)`) but lists the seat's layouts by xkb code (`latam,us`), so the codes are translated through xkb's own table to find the other EN/ES slot, and the widget switches to it by index
+4. **Language Codes**: Uses `xkbcli list --load-exotic` to map xkb descriptions to standard language codes (en/es/fr/de/etc.). An English or a Spanish layout is recognised from its own description when that table did not answer, so the badge stays readable either way
+5. **Toggle Logic**: Reads where the keyboard stands from the `active_layout_index` hyprctl reports next to the layout list, finds the other of the two EN/ES slots and switches to it by index. A description xkb's table does not carry therefore cannot leave the toggle pointing at the slot that is already active
 
 ### The two dialects of `hyprctl devices`
 
@@ -163,7 +199,7 @@ The layout list and the active layout must never be compared directly.
 
 - Omarchy Quattro (with `omarchy-shell`)
 - Hyprland (for `hyprctl` and `switchxkblayout`)
-- `xkbcli` (for layout briefs — `xkbcli` package on Arch)
+- `xkbcli` (for the language briefs and the code-to-language table — `xkbcli` package on Arch)
 
 ## Removal
 

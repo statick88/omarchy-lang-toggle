@@ -105,24 +105,91 @@ function otherEnEsIndex(layoutList, codes, currentBrief) {
   return -1
 }
 
+// The slot the toggle switches to: the other of the two EN/ES layouts.
+//
+// Where the keyboard stands comes from hyprctl twice over — as the description
+// of the active layout and as its index in the layout list — and the index is
+// the one to believe. The description only names a language when xkb's table
+// answered for it, so a table that did not answer, or a description the table
+// does not carry, left the comparison with nothing to compare: the toggle
+// resolved to the slot the keyboard was already on, which switches nothing and
+// reads as a dead key.
+//
+// The brief stays as the fallback for a Hyprland that reports no index at all.
+function toggleTargetIndex(layoutList, codes, currentIndex, currentBrief) {
+  var list = layoutCodes(layoutList)
+  var enEs = []
+
+  for (var i = 0; i < list.length; i++) {
+    var brief = codeBrief(codes, list[i]).toLowerCase()
+    if (brief === "en" || brief === "es") enEs.push({ index: i, brief: brief })
+  }
+
+  // One of the two on the seat is not a toggle.
+  if (enEs.length < 2) return -1
+
+  var index = currentIndex === undefined || currentIndex === null || currentIndex === ""
+    ? -1
+    : Number(currentIndex)
+
+  if (index >= 0 && index < list.length) {
+    // Standing on one of the two: the other one is the target.
+    for (var j = 0; j < enEs.length; j++) {
+      if (enEs[j].index === index) {
+        for (var k = 0; k < enEs.length; k++) {
+          if (enEs[k].index !== index) return enEs[k].index
+        }
+      }
+    }
+
+    // Standing on neither: English leads, the one the badge is named after.
+    for (var m = 0; m < enEs.length; m++) {
+      if (enEs[m].brief === "en") return enEs[m].index
+    }
+    return enEs[0].index
+  }
+
+  return otherEnEsIndex(layoutList, codes, currentBrief)
+}
+
+// The brief of a layout, with the description's own language as the fallback.
+//
 // The brief is a short language code rather than a country one, which keeps the
 // label sensible for the layouts named after a language: Esperanto reads EO and
 // Arabic reads AR. It is the same code GNOME shows in its own indicator.
 //
+// A description names its language outright when it is an English or a Spanish
+// layout, so those two can be recognised without xkb's table: a table that did
+// not answer, or one that does not carry the description, still leaves the two
+// layouts this widget toggles between readable as EN and ES.
+//
 // Layouts missing from the table fall back to the first word of the description,
 // which reads as ENG/POR but at least says something.
-//
-// Nearly every brief is a bare two-letter code, but a few tack a script onto it
-// (Burmese (Zawgyi) is my-zwg) and the custom layout's is a word, so drop the
-// script and cap the result at the same three characters the fallback gets.
-// The widget sits between fixed neighbours on the bar and has no room to grow.
-function shortLabel(description, briefs) {
-  if (!description) return ""
-
+function briefFor(description, briefs) {
   // A description like "constructor" reaches an inherited member rather than a
   // brief, so take the lookup only when it hands back the string it promises.
   var brief = (briefs || {})[description]
-  var label = typeof brief === "string" && brief ? brief.split("-")[0] : description.split(/\s+/)[0]
+  if (typeof brief === "string" && brief) return brief
+
+  var desc = String(description || "").toLowerCase()
+  if (desc.indexOf("english") === 0) return "en"
+  if (desc.indexOf("spanish") === 0) return "es"
+
+  return ""
+}
+
+// The label the bar shows: the brief, capped at the three characters the
+// fallback gets. The widget sits between fixed neighbours on the bar and has
+// no room to grow.
+//
+// Nearly every brief is a bare two-letter code, but a few tack a script onto it
+// (Burmese (Zawgyi) is my-zwg) and the custom layout's is a word, so drop the
+// script.
+function shortLabel(description, briefs) {
+  if (!description) return ""
+
+  var brief = briefFor(description, briefs)
+  var label = brief ? brief.split("-")[0] : String(description).split(/\s+/)[0]
   return label.substring(0, 3).toUpperCase()
 }
 
@@ -203,6 +270,8 @@ if (typeof module !== "undefined") {
     layoutTable: layoutTable,
     codeBrief: codeBrief,
     otherEnEsIndex: otherEnEsIndex,
+    toggleTargetIndex: toggleTargetIndex,
+    briefFor: briefFor,
     selectKeyboard: selectKeyboard,
     shortLabel: shortLabel
   }

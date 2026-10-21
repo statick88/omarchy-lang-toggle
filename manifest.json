@@ -2,22 +2,24 @@
   "schemaVersion": 1,
   "id": "io.github.statick.lang-toggle",
   "name": "Language Toggle",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "statick",
   "license": "MIT",
-  "description": "EN/ES keyboard layout toggle for Omarchy bar — shows current layout, click or press Fn to switch",
-  "kinds": ["bar-widget"],
+  "description": "EN/ES keyboard layout toggle for Omarchy bar — shows current layout, click or press a key to switch",
+  "kinds": [
+    "bar-widget"
+  ],
   "entryPoints": {
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
     "displayName": "Language Toggle",
-    "description": "Shows EN/ES in the bar, click or press Fn to toggle between layouts",
+    "description": "Shows EN/ES in the bar, click or press a keybinding to toggle between layouts",
     "category": "Compositor",
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
-      "toggleKey": "Fn",
+      "toggleKey": "SUPER+U",
       "showFullName": "Off"
     },
     "schema": [
@@ -25,14 +27,17 @@
         "key": "toggleKey",
         "type": "string",
         "label": "Toggle key",
-        "defaultValue": "Fn",
-        "description": "Key to press for toggling layout (Fn, Super+Space, etc.)"
+        "defaultValue": "SUPER+U",
+        "description": "Key you bound for toggling the layout (informational, the binding itself lives in your Hyprland config)"
       },
       {
         "key": "showFullName",
         "type": "enum",
         "label": "Show full name",
-        "options": ["Off", "On"],
+        "options": [
+          "Off",
+          "On"
+        ],
         "defaultValue": "Off",
         "description": "Show 'English (US)' instead of 'EN' in the bar"
       }

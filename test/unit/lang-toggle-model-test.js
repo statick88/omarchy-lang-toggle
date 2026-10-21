@@ -26,6 +26,8 @@ const {
   layoutTable,
   codeBrief,
   otherEnEsIndex,
+  toggleTargetIndex,
+  briefFor,
   shortLabel,
   eventKeyboardName,
   isTypedKeyboard,
@@ -200,6 +202,9 @@ assertEqual(shortLabel('French (FR)', briefs), 'FR', 'French (FR) -> FR')
 assertEqual(shortLabel('German (DE)', briefs), 'DE', 'German (DE) -> DE')
 assertEqual(shortLabel('English (UK)', briefs), 'EN', 'English (UK) -> EN')
 assertEqual(shortLabel('Unknown Layout', briefs), 'UNK', 'Unknown falls back to first word')
+assertEqual(shortLabel('English (US)', {}), 'EN', 'Without the xkb table English reads EN')
+assertEqual(shortLabel('Spanish (Latin American)', {}), 'ES', 'Without the xkb table Spanish reads ES')
+assertEqual(shortLabel('English (US)', null), 'EN', 'Without a table at all English reads EN')
 assertEqual(shortLabel('', briefs), '', 'Empty string returns empty')
 assertEqual(shortLabel(null, briefs), '', 'Null returns empty')
 
@@ -260,6 +265,70 @@ assert(!isEnEsLayout('French (FR)'), 'French is not EN/ES')
 assert(!isEnEsLayout('German (DE)'), 'German is not EN/ES')
 assert(!isEnEsLayout(''), 'Empty is not EN/ES')
 assert(!isEnEsLayout(null), 'Null is not EN/ES')
+
+// --- briefFor --------------------------------------------------------------
+
+console.log('\n--- briefFor tests ---')
+assertEqual(briefFor('English (US)', briefs), 'en', 'English (US) -> en')
+assertEqual(briefFor('Spanish (Latin American)', briefs), 'es', 'Spanish (Latin American) -> es')
+assertEqual(briefFor('French (FR)', briefs), 'fr', 'French (FR) -> fr')
+
+// The table did not answer, or did not carry the description: the description
+// of an English or a Spanish layout still names its own language, which is
+// what keeps the badge readable without xkb's table.
+assertEqual(briefFor('English (US)', {}), 'en', 'Empty table -> en from the description')
+assertEqual(briefFor('English (UK)', {}), 'en', 'Empty table -> en from the description')
+assertEqual(briefFor('Spanish (Latin American)', {}), 'es', 'Empty table -> es from the description')
+assertEqual(briefFor('Spanish (ES)', null), 'es', 'Null table -> es from the description')
+assertEqual(briefFor('French (FR)', {}), '', 'A description naming no language has no brief')
+assertEqual(briefFor('constructor', briefs), '', 'An inherited member is not a brief')
+assertEqual(briefFor('', briefs), '', 'Empty description has no brief')
+assertEqual(briefFor(null, briefs), '', 'Null description has no brief')
+
+// --- toggleTargetIndex -----------------------------------------------------
+
+console.log('\n--- toggleTargetIndex tests ---')
+// Where the keyboard stands comes from hyprctl twice: the description of the
+// active layout and its index in the layout list. The index is what the
+// toggle believes, because the description only names a language when xkb's
+// table answered.
+assertEqual(toggleTargetIndex('latam,us', table.codes, 1, 'en'), 0, 'Index 1 (EN) -> Spanish slot (index 0)')
+assertEqual(toggleTargetIndex('latam,us', table.codes, 0, 'es'), 1, 'Index 0 (ES) -> English slot (index 1)')
+assertEqual(toggleTargetIndex('us,latam', table.codes, 0, 'en'), 1, 'us,latam, index 0 -> index 1')
+assertEqual(toggleTargetIndex('us,latam', table.codes, 1, 'es'), 0, 'us,latam, index 1 -> index 0')
+assertEqual(toggleTargetIndex('es,us', table.codes, 1, 'es'), 0, 'es,us, index 1 -> index 0')
+assertEqual(toggleTargetIndex('us,es', table.codes, 0, 'en'), 1, 'us,es, index 0 -> index 1')
+
+// The bug the index replaces: the active layout was found by its brief, so a
+// description xkb's table did not carry left the comparison with nothing to
+// compare, and the toggle resolved to the slot the keyboard was already on.
+// That switches nothing and reads as a dead key.
+assertEqual(toggleTargetIndex('us,latam', table.codes, 0, ''), 1, 'Unknown brief, index 0 -> the other slot (index 1)')
+assertEqual(toggleTargetIndex('latam,us', table.codes, 0, ''), 1, 'Unknown brief, index 0 -> the other slot (index 1)')
+assertEqual(toggleTargetIndex('us,latam', table.codes, 1, ''), 0, 'Unknown brief, index 1 -> the other slot (index 0)')
+
+// A third, unrelated layout must not be picked.
+assertEqual(toggleTargetIndex('us,de,latam', table.codes, 0, 'en'), 2, 'Skips the unrelated German slot')
+assertEqual(toggleTargetIndex('de,us,latam', table.codes, 1, 'es'), 2, 'Skips the German slot in the middle')
+
+// On neither of the two: English leads.
+assertEqual(toggleTargetIndex('de,us,latam', table.codes, 0, 'de'), 1, 'Neither active -> the English slot')
+assertEqual(toggleTargetIndex('latam,fr,us', table.codes, 1, 'fr'), 2, 'Neither active, English last -> the English slot')
+
+// No pair on the seat: inert, never a wrong switch.
+assertEqual(toggleTargetIndex('us,de', table.codes, 0, 'en'), -1, 'No ES on the seat -> -1')
+assertEqual(toggleTargetIndex('latam,fr', table.codes, 0, 'es'), -1, 'No EN on the seat -> -1')
+assertEqual(toggleTargetIndex('de,fr', table.codes, 0, 'de'), -1, 'Neither EN nor ES on the seat -> -1')
+assertEqual(toggleTargetIndex('', table.codes, 0, 'en'), -1, 'Empty layout list -> -1')
+assertEqual(toggleTargetIndex(null, table.codes, 0, 'en'), -1, 'Null layout list -> -1')
+assertEqual(toggleTargetIndex('us,latam', null, 0, 'en'), -1, 'Null code table -> -1')
+assertEqual(toggleTargetIndex('us,latam', {}, 0, 'en'), -1, 'Empty code table -> -1')
+
+// A Hyprland that reports no index falls back to the brief.
+assertEqual(toggleTargetIndex('latam,us', table.codes, undefined, 'en'), 0, 'No index, EN active -> Spanish slot')
+assertEqual(toggleTargetIndex('latam,us', table.codes, null, 'es'), 1, 'No index, ES active -> English slot')
+assertEqual(toggleTargetIndex('latam,us', table.codes, undefined, ''), 0, 'No index and no brief -> the first EN/ES slot')
+assertEqual(toggleTargetIndex('latam,us', table.codes, 9, 'en'), 0, 'An index past the seat -> the brief decides')
 
 // Summary
 console.log('\n=== SUMMARY ===')

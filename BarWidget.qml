@@ -22,9 +22,14 @@ BarWidget {
   property var layoutCodes: ({})
   property var currentTypedKeyboards: []
 
+  // The keyboard the last reading spoke for, kept whole. The label, the slot
+  // the toggle resolves and the device the switch names all have to come from
+  // the same reading, or the badge describes one keyboard while the toggle
+  // resolves against another.
+  property var currentKeyboard: null
+
   // Computed
   readonly property string layoutLabel: LangToggleModel.shortLabel(layoutFull, layoutBriefs)
-  readonly property string layoutBrief: String(layoutBriefs[layoutFull] || "")
   property bool refreshPending: false
 
   // --- Core Logic ---
@@ -54,15 +59,25 @@ BarWidget {
   // active one is named by its description ("English (US)"), so the slot of
   // the other language is found by translating the codes into briefs. The
   // result is the index switchxkblayout expects.
+  //
+  // Where the keyboard stands is taken from the index hyprctl reports next to
+  // that list rather than from the description's brief: a description xkb's
+  // table did not carry leaves the comparison with nothing to compare, and
+  // the toggle would resolve to the slot already active and switch nothing.
   function toggleEnEs() {
-    if (!root.keyboardName || !root.bar) return
-    const kb = root.selectKeyboard()
+    if (!root.bar) return
+
+    const kb = root.currentKeyboard
     if (!kb) return
 
-    const targetIndex = LangToggleModel.otherEnEsIndex(kb.layout, root.layoutCodes, root.layoutBrief)
+    const name = String(kb.name || "")
+    if (!name) return
+
+    const currentBrief = LangToggleModel.briefFor(kb.active_keymap, root.layoutBriefs)
+    const targetIndex = LangToggleModel.toggleTargetIndex(kb.layout, root.layoutCodes, kb.active_layout_index, currentBrief)
     if (targetIndex < 0) return
 
-    root.bar.run("hyprctl switchxkblayout " + Util.shellQuote(root.keyboardName) + " " + targetIndex)
+    root.bar.run("hyprctl switchxkblayout " + Util.shellQuote(name) + " " + targetIndex)
     refreshTimer.restart()
   }
 
@@ -114,12 +129,14 @@ BarWidget {
           if (typed.length === 0) {
             root.layoutFull = ""
             root.keyboardName = ""
+            root.currentKeyboard = null
           }
           return
         }
         root.keyboardUnresolved = false
         root.keyboardCount = typed.length
         root.keyboardName = String(kb.name || "")
+        root.currentKeyboard = kb
         root.multipleLayouts = kb.layout === undefined || String(kb.layout).indexOf(",") !== -1
         root.layoutFull = kb.active_keymap
       }
